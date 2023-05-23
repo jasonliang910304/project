@@ -6,6 +6,6 @@ pip install OpenCV-python
 
 pip install --upgrade OpenCV-python
 
-pip install Roborflow
+pip install roboflow
 
 
