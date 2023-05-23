@@ -1,0 +1,11 @@
+pip install ultralytics
+
+pip install tensorflow
+
+pip install OpenCV-python
+
+pip install --upgrade OpenCV-python
+
+pip install Roborflow
+
+
