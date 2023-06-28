@@ -8,4 +8,9 @@ pip install --upgrade OpenCV-python
 
 pip install roboflow
 
+pip install keras
+
+pip install rembg
+pip install pillow
+
 
