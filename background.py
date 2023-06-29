@@ -1,46 +1,39 @@
-import cv2 as cv
+import cv2
 import numpy as np
 
-image = cv.imread("background.jpg")
-cv.imshow("input", image)
-h, w, ch = image.shape
+# 读取输入图像
+image = cv2.imread("cropped.jpg")
+height, width = image.shape[:2]
 
-# 构建图像数据
-data = image.reshape((-1, 3))
-data = np.float32(data)
+# 创建与图像大小相同的掩码
+mask = np.zeros((height, width), dtype=np.uint8)
 
-# 图像分割
-criteria = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 10, 1.0)
-num_clusters = 4
-ret, label, center = cv.kmeans(
-    data, num_clusters, None, criteria, num_clusters, cv.KMEANS_RANDOM_CENTERS
-)
+# 定义前景和背景模型
+bgdModel = np.zeros((1, 65), dtype=np.float64)
+fgdModel = np.zeros((1, 65), dtype=np.float64)
 
-# 生成mask区域
-index = label[0][0]
-center = np.uint8(center)
-color = center[0]
-mask = np.zeros((h, w), dtype=np.uint8)
-label = np.reshape(label, (h, w))
-mask[label == index] = 255
+# 定义感兴趣区域（ROI）为整个图像
+rect = (121, 159, 559, 483)
 
-# 高斯模糊
-se = cv.getStructuringElement(cv.MORPH_RECT, (3, 3))
-cv.dilate(mask, se, mask)
-mask = cv.GaussianBlur(mask, (5, 5), 0)
-cv.imshow("background-mask", mask)
+# 初始化背景和前景模型样本
+bgdSamples = np.zeros((1, 65), dtype=np.float64)
+fgdSamples = np.zeros((1, 65), dtype=np.float64)
 
-# 背景替换
-result = np.zeros((h, w, ch), dtype=np.uint8)
-for row in range(h):
-    for col in range(w):
-        w1 = mask[row, col] / 255.0
-        b, g, r = image[row, col]
-        b = w1 * 255 + b * (1.0 - w1)
-        g = w1 * 0 + g * (1.0 - w1)
-        r = w1 * 255 + r * (1.0 - w1)
-        result[row, col] = (b, g, r)
-cv.imshow("background-substitution", result)
+# 使用GrabCut算法进行图像分割
+cv2.grabCut(image, mask, rect, bgdModel, fgdModel, 5, cv2.GC_INIT_WITH_RECT)
 
-cv.waitKey(0)
-cv.destroyAllWindows()
+# 更新背景和前景模型样本
+bgdModel = bgdSamples
+fgdModel = fgdSamples
+
+# 将掩码中的可能前景和可能背景设置为对应的前景和背景
+mask2 = np.where((mask == 2) | (mask == 0), 0, 1).astype("uint8")
+
+# 将输入图像与掩码进行按位与操作，提取前景
+foreground = cv2.bitwise_and(image, image, mask=mask2)
+
+# 显示结果
+cv2.imshow("Input Image", image)
+cv2.imshow("GrabCut Foreground", foreground)
+cv2.waitKey(0)
+cv2.destroyAllWindows()
