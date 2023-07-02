@@ -1,6 +1,5 @@
 pip install ultralytics
 
-pip install tensorflow
 
 pip install OpenCV-python
 
@@ -14,3 +13,6 @@ pip install rembg
 pip install pillow
 
 pip install matplotlib 
+
+pip install imutils
+pip install pytesseract
