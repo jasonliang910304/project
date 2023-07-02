@@ -5,7 +5,7 @@ from matplotlib import pyplot as plt
 from rembg import remove
 
 """
-check car position
+background remove
 """
 model = YOLO("yolov8n.pt")  # import model  
 results = model("car.jpg")  # send car.jpg into results
