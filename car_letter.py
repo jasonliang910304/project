@@ -2,10 +2,10 @@ from PIL import Image
 from ultralytics import YOLO
 import numpy as np
 # Load a pretrained YOLOv8n model
-model = YOLO("car_letters.pt")
+model = YOLO("car_letter.pt")
 
 # Run inference on 'bus.jpg'
-results = model.predict("car2.jpg")  # results list
+results = model.predict("new.jpg")  # results list
 platex = []
 platenum = []
 final = []
@@ -31,14 +31,11 @@ for r in results:
         platex.append(cords[0])
         platenum.append(r.names[box.cls[0].item()])
     
-#print(sorted(platex))
-#print(platenum)
-#d = np.vstack((platex, platenum)) 
+
 a = platex
 b = platenum
 c = np.lexsort((b,a))
-#print(a)
-#print(b)
+
 for n in c:
     final.append(platenum[n])
 print(final)
