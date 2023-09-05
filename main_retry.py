@@ -99,12 +99,15 @@ def Space_state(cars, parking_spaces):
         for car in cars:
                 for i, parking_space in enumerate(parking_spaces):
                         overlap = Calculate_overlap(car.mask, parking_space.area)
-                        if overlap > 0.7:
-                                parking_spaces[i].state = "Occupied"
+                        if overlap > 0.9:
+                                parking_spaces[i].state = "green"
                                 parking_spaces[i].car_number = car.car_number
                                 #print(parking_spaces[i].space_number,parking_spaces[i].car_number,parking_spaces[i].state)
+                        elif overlap > 0.5 and overlap < 0.9:
+                                parking_spaces[i].state = "yellow"
+                                parking_spaces[i].car_number = car.car_number
                         else:
-                                parking_spaces[i].state = "Empty"
+                                parking_spaces[i].state = "red"
                                 parking_spaces[i].car_number = None
                                 #print(parking_spaces[i].space_number,parking_spaces[i].car_number,parking_spaces[i].state)
         return parking_spaces
@@ -135,9 +138,9 @@ def main():
                         cars = Car_info(frame)
                         if cars != []:
                                 parking_spaces = Space_state(cars, parking_spaces)
-                                for parking_space in parking_spaces:
-                                        print(parking_space.space_number,parking_space.car_number,parking_space.state)
                         else:
                                 print('?')
+                        for parking_space in parking_spaces:
+                                print(parking_space.space_number,parking_space.car_number,parking_space.state)
 if __name__ == "__main__":
         main()
