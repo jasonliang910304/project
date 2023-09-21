@@ -1,6 +1,7 @@
 from ultralytics import YOLO
 import cv2
 import numpy as np
+from flask import Flask, jsonify, current_app
 
 class car:
         def __init__(self, car_number, mask):
@@ -16,10 +17,11 @@ def Display(ret, frame):
 
 def Car_info(frame):
         #print('car_info')
-        car_model = YOLO("car.pt")
+        car_model = YOLO("car_v3_mix.pt")
         results = car_model.predict(frame, verbose = False)
         img = frame.copy()
         cars = []
+        r = []
         for result in results:
                 boxes = result.boxes.cpu().numpy()
                 if len(boxes) > 0:
@@ -32,7 +34,8 @@ def Car_info(frame):
                         car_number = Car_number(car_plate_crop)
                         temp = car(car_number, car_mask)
                         cars.append(temp)
-        return cars
+
+        return cars, r
 
 def Car_plate_crop(car_crop):
         #print('car_plate_crop')
@@ -82,7 +85,7 @@ class parking_space:
 
 def Parking_space_area(frame):
         img = frame.copy()
-        parking_space_model = YOLO("parking_space_tape.pt")
+        parking_space_model = YOLO("parking_space_mix_v2.pt")
         results = parking_space_model.predict(img, verbose = False)
         parking_spaces = []
 
@@ -90,24 +93,25 @@ def Parking_space_area(frame):
                 if result.masks is not None:
                         for j, mask in enumerate(result.masks.data):
                                 mask = mask.cpu().numpy()
-                                mask = cv2.resize(mask, (1280, 720))
+                                mask = cv2.resize(mask, (frame.shape[1], frame.shape[0]))
                                 temp = parking_space(j, "", "Empty", mask)
                                 parking_spaces.append(temp)
+                                #cv2.imshow('test', mask)        #space mask
         return parking_spaces
 
 def Space_state(cars, parking_spaces):
         for car in cars:
                 for i, parking_space in enumerate(parking_spaces):
                         overlap = Calculate_overlap(car.mask, parking_space.area)
-                        if overlap > 0.9:
-                                parking_spaces[i].state = "green"
+                        if overlap > 0.7:
+                                parking_spaces[i].state = "red"
                                 parking_spaces[i].car_number = car.car_number
                                 #print(parking_spaces[i].space_number,parking_spaces[i].car_number,parking_spaces[i].state)
-                        elif overlap > 0.5 and overlap < 0.9:
+                        elif overlap > 0.4 and overlap < 0.7:
                                 parking_spaces[i].state = "yellow"
                                 parking_spaces[i].car_number = car.car_number
                         else:
-                                parking_spaces[i].state = "red"
+                                parking_spaces[i].state = "green"
                                 parking_spaces[i].car_number = None
                                 #print(parking_spaces[i].space_number,parking_spaces[i].car_number,parking_spaces[i].state)
         return parking_spaces
@@ -117,30 +121,54 @@ def Calculate_overlap(car_mask, area):
         print(overlap)
         return overlap
 
+app = Flask(__name__)
+@app.route('/get_status/<car_number>/<space_state>', methods = ['GET'])
+def get_status(car_number, space_state):
+        with current_app.app_context():
+                status = {
+                        "FeatureSetting" : car_number,
+                        "Setting1" : space_state
+                }
+                return jsonify(status)
+
+
 def main():
         not_detect_space = True
-        video_path = 'video.mp4'
+        video_path = 'video_demo_v2.mp4'
 #       url = 'https://192.168.1.101:8080/video'
         capture = cv2.VideoCapture(video_path)
         parking_spaces = []
+
         while True:
                 ret, frame = capture.read()
-                Display(ret, frame)
                 if not_detect_space:
+                        overlay = np.zeros_like(frame, dtype = np.uint8)
                         parking_spaces = Parking_space_area(frame)
                         if parking_spaces != []:
                                 not_detect_space = False
+                                overlay[parking_spaces[0].area > 0] = [255, 255, 255]
                                 #for parking_space in parking_spaces:
                                 #        print(parking_space.space_number,parking_space.car_number,parking_space.state)
                         else:
                                 print('please retry')
                 else:
-                        cars = Car_info(frame)
+                        cars, r = Car_info(frame)
                         if cars != []:
                                 parking_spaces = Space_state(cars, parking_spaces)
+                                get_status(parking_spaces[0].car_number, parking_spaces[0].state)
+                                #for rectangle
+                                if(parking_spaces[0].state == "green"):
+                                        cv2.rectangle(frame, (r[0], r[1]), (r[2], r[3]), (0, 255, 0), thickness=2)
+                                elif(parking_spaces[0].state == "yellow"):
+                                        cv2.rectangle(frame, (r[0], r[1]), (r[2], r[3]), (0, 255, 255), thickness=2)
+                                elif(parking_spaces[0].state == "red"):
+                                        cv2.rectangle(frame, (r[0], r[1]), (r[2], r[3]), (0, 0, 255), thickness=2)
                         else:
                                 print('?')
                         for parking_space in parking_spaces:
                                 print(parking_space.space_number,parking_space.car_number,parking_space.state)
+                cv2.addWeighted(overlay, 0.5, frame, 1, 0, frame)
+                Display(ret, frame)
 if __name__ == "__main__":
+        app.run(host = '0.0.0.0', port = 5000)
         main()
