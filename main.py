@@ -1,6 +1,7 @@
 from ultralytics import YOLO
 import cv2
 import numpy as np
+import threading
 
 class car:
         def __init__(self, car_number, mask, xy):
@@ -23,7 +24,7 @@ def Car_info(frame, history_detect_number):
                 boxes = result.boxes.cpu().numpy()
                 if len(boxes) > 0:
                         for box in boxes:
-                                final = []
+                                final_str = ""
                                 xy = box.xyxy[0].astype(int)    #car position
                                 car_mask = np.zeros((frame.shape[0], frame.shape[1]))
                                 car_mask[xy[1] : xy[3], xy[0] : xy[2]] = 1
@@ -33,7 +34,8 @@ def Car_info(frame, history_detect_number):
                                         car_number = Car_number_detect(car_plate_crop)
                                         history_detect_number = Check_length(car_number, history_detect_number)
                                         final = Choose_max(history_detect_number)
-                                cars.append(car(final, car_mask, xy))
+                                        final_str = "".join(final)
+                                cars.append(car(final_str, car_mask, xy))
         return cars
 
 def Car_plate_crop(car_crop):
@@ -163,8 +165,45 @@ def Calculate_overlap(cars, parking_space_area):
                         car_number = car.car_number
         return max, car_number
 
+def Create_car_inform_window(state, car_number):
+    # 创建一个空白画布
+    image = np.ones((800, 1200, 3), np.uint8) * 255
+
+    # 设置蓝色矩形
+    cv2.rectangle(image, (460, 300), (1060, 600), (255, 0, 0), -1)  # 蓝色填充矩形
+
+    # 创建红色圆形
+    cv2.circle(image, (100, 100), 50, (0, 0, 255), -1)  # 红色圆形
+
+    # 创建黄色圆形
+    cv2.circle(image, (625, 100), 50, (0, 255, 255), -1)  # 黄色圆形
+
+    # 创建绿色圆形
+    cv2.circle(image, (1100, 100), 50, (0, 255, 0), -1)  # 绿色圆形
+
+    # 创建车位状态灯
+    if state == "green":
+        cv2.circle(image, (700, 625), 50, (0, 255, 0), -1)  # 绿色圆形
+    elif state == "yellow":
+        cv2.circle(image, (700, 625), 50, (0, 255, 255), -1)  # 黄色圆形
+    else:
+        cv2.circle(image, (700, 625), 50, (0, 0, 255), -1)  # 红色圆形
+
+    # 添加文字
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    cv2.putText(image, "車位資訊", (550, 50), font, 1, (0, 0, 0), 2, cv2.LINE_AA)
+    cv2.putText(image, "已停車", (205, 100), font, 1, (0, 0, 0), 2, cv2.LINE_AA)
+    cv2.putText(image, "停車中", (730, 100), font, 1, (0, 0, 0), 2, cv2.LINE_AA)
+    cv2.putText(image, "未停車", (1205, 100), font, 1, (0, 0, 0), 2, cv2.LINE_AA)
+    cv2.putText(image, car_number, (480, 425), font, 0.8, (0, 0, 0), 2, cv2.LINE_AA)
+
+    # 显示图像
+    cv2.imshow("car_inform", image)
+    #cv2.waitKey(0)
+    #cv2.destroyAllWindows()
+
 def main():
-        video_path = "video_demo_v3.mp4"        #this is for video testing
+        video_path = "video_demo_v4.mp4"        #this is for video testing
         #url =  #this is for streaming
         capture = cv2.VideoCapture(video_path)
         not_detect_space = True
@@ -176,6 +215,7 @@ def main():
         while True:
                 ret, frame = capture.read()
                 count = count + 1
+                #thread1 = threading.Thread(target=Display, args=(ret, frame))
                 if not_detect_space:
                         parking_spaces = Parking_space_area(frame)
                         if parking_spaces != []:
@@ -189,11 +229,21 @@ def main():
                                         parking_spaces = Space_state(cars, parking_spaces)
                                 else:
                                         print("there's no car")
+                                """
                                 for parking_space in parking_spaces:
                                         print(parking_space.space_number, parking_space.car_number, parking_space.state)
+                                """
                         elif count % speed != 0:
                                 continue
+                        """
+                        thread1.start()
+                        thread2 = threading.Thread(target=Create_car_inform_window, args=(parking_spaces[0].state, ))
+                        thread2.start()
+                        thread1.join()
+                        thread2.join()
+                        """
                         Display(ret, frame)
+                        Create_car_inform_window(parking_spaces[0].state, parking_spaces[0].car_number)
 
 if __name__ == "__main__":
         main()
