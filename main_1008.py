@@ -103,8 +103,8 @@ def check_num (num):
         num5 = max(set(fifth_num) , key=fifth_num.count)
         num6 = max(set(sixth_num) , key=sixth_num.count)
         if len(num[0])==7:
-                seventh_num = [sublist[6] for sublist in num]     
-                num7 = max(set(seventh_num) , key=seventh_num.count)   
+                seventh_num = [sublist[6] for sublist in num]
+                num7 = max(set(seventh_num) , key=seventh_num.count)
                 final=[num1,num2,num3,num4,num5,num6,num7]
         else:
                 final=[num1,num2,num3,num4,num5,num6]
@@ -160,7 +160,7 @@ number7=['xxxxxxx']
 
 def main():
         not_detect_space = True
-        video_path = 'video_real_v2.mp4'
+        video_path = 'video_demo_v4.mp4'
 #       url = 'https://192.168.1.101:8080/video'
         capture = cv2.VideoCapture(video_path)
         parking_spaces = []
